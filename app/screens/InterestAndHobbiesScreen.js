@@ -115,33 +115,26 @@ const SuccessRewardModal = ({ visible, onClose, awardedAmount, navigation, userR
   const handleOKPress = () => {
     onClose();
     
-    // ✅ FIXED: Proper navigation based on user role
+    // ✅ FIXED: Navigate to correct dashboard with award info
     if (userRole === 'creator') {
-      console.log('🎯 Navigating to CreatorDashboard with award:', awardedAmount);
       navigation.reset({
         index: 0,
         routes: [{ 
           name: 'CreatorDashboard',
           params: { 
             awardedAmount: awardedAmount,
-            showMessage: `₹${awardedAmount} added to your wallet!`,
-            isProfileComplete: true,
-            refreshKey: Date.now()
+            showMessage: `₹${awardedAmount} added to your wallet!`
           }
         }],
       });
     } else {
-      console.log('🎯 Navigating to FillerDashboard with award:', awardedAmount);
       navigation.reset({
         index: 0,
         routes: [{ 
           name: 'FillerDashboard',
           params: { 
             awardedAmount: awardedAmount,
-            showSurveyUnlockPopup: true,
-            isProfileComplete: true,
-            showGreenProfileCard: true,
-            refreshKey: Date.now()
+            showSurveyUnlockPopup: true
           }
         }],
       });
@@ -429,9 +422,9 @@ const InterestAndHobbiesScreen = ({ navigation, route }) => {
             const accessToken = session.access_token;
             const authUserID = session.user.id; 
 
-            // ✅ FIXED: Get user role from session (not just state)
-            const currentUserRole = session.user.user_metadata?.user_role || userRole || 'filler';
-            console.log("🎯 Final step - Saving for user role:", currentUserRole);
+            // ✅ FIXED: Get user role from session
+            const userRole = session.user.user_metadata?.user_role || 'filler';
+            console.log("Final step - User role:", userRole);
 
             const payload = {
                 hobbies_data: selectedInterests,
@@ -454,10 +447,11 @@ const InterestAndHobbiesScreen = ({ navigation, route }) => {
             });
 
             if (response.ok) {
-                console.log('✅ Profile completion saved successfully.');
+                console.log('Profile completion saved successfully.');
                 
                 try {
-                    const getWalletResponse = await fetch(`${REST_API_URL}?user_id=eq.${authUserID}&select=wallet_balance,reward_reason`, {
+                    // First get current wallet balance
+                    const getWalletResponse = await fetch(`${REST_API_URL}?user_id=eq.${authUserID}&select=wallet_balance`, {
                         headers: {
                             'Authorization': `Bearer ${accessToken}`,
                             'apikey': SUPABASE_ANON_KEY,
@@ -466,64 +460,63 @@ const InterestAndHobbiesScreen = ({ navigation, route }) => {
                     });
                     
                     let currentBalance = 0;
-                    let existingRewardReason = '';
                     if (getWalletResponse.ok) {
                         const walletData = await getWalletResponse.json();
                         if (walletData && walletData.length > 0) {
                             currentBalance = walletData[0].wallet_balance || 0;
-                            existingRewardReason = walletData[0].reward_reason || '';
                         }
                     }
                     
-                    // Check if user already received bonus for this role
+                    // Calculate new balance
                     const newBalance = currentBalance + AWARD_AMOUNT;
                     
-                    const rewardReason = currentUserRole === 'creator' 
+                    // ✅ UPDATED: Set different reward reason for creator
+                    const rewardReason = userRole === 'creator' 
                       ? 'Profile completion bonus (Creator)' 
                       : 'Profile completion bonus';
-                    
-                    // Only award if not already awarded for this role
-                    if (!existingRewardReason.includes(rewardReason)) {
-                      const updateWalletResponse = await fetch(`${REST_API_URL}?user_id=eq.${authUserID}`, {
-                          method: 'PATCH',
-                          headers: {
-                              'Content-Type': 'application/json',
-                              'Authorization': `Bearer ${accessToken}`,
-                              'apikey': SUPABASE_ANON_KEY,
-                          },
-                          body: JSON.stringify({ 
-                              wallet_balance: newBalance,
-                              last_reward_received: new Date().toISOString(),
-                              reward_reason: rewardReason
-                          }),
-                      });
                       
-                      if (updateWalletResponse.ok) {
-                          console.log(`✅ ${currentUserRole} awarded ₹50: ${currentBalance} → ${newBalance}`);
-                      } else {
-                          console.error('❌ Wallet update failed');
-                      }
+                    // Update wallet with new balance
+                    const updateWalletResponse = await fetch(`${REST_API_URL}?user_id=eq.${authUserID}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${accessToken}`,
+                            'apikey': SUPABASE_ANON_KEY,
+                        },
+                        body: JSON.stringify({ 
+                            wallet_balance: newBalance,
+                            last_reward_received: new Date().toISOString(),
+                            reward_reason: rewardReason
+                        }),
+                    });
+                    
+                    if (updateWalletResponse.ok) {
+                        console.log(`✅ Wallet updated: ${currentBalance} + ${AWARD_AMOUNT} = ${newBalance}`);
+                        
+                        // Show success modal
+                        setSuccessModalVisible(true);
                     } else {
-                      console.log(`ℹ️ ${currentUserRole} already received profile completion bonus`);
+                        const errorText = await updateWalletResponse.text();
+                        console.error('Wallet update failed:', errorText);
+                        Alert.alert("Error", "Could not update wallet balance. Please contact support.");
+                        setIsLoading(false);
                     }
                 } catch (walletError) {
                     console.error('Error updating wallet:', walletError);
+                    Alert.alert("Error", "Failed to update wallet balance. Please contact support.");
+                    setIsLoading(false);
                 }
-                
-                // ✅ FIXED: Pass the currentUserRole to modal (not stale state)
-                setUserRole(currentUserRole);
-                setSuccessModalVisible(true);
                 
             } else {
                 const errorText = await response.text();
-                console.error('❌ Update Failed:', response.status, errorText);
+                console.error('Update Failed:', response.status, errorText);
                 Alert.alert("Save Error", "Could not save profile completion.");
+                setIsLoading(false);
             }
 
         } catch (apiError) {
-            console.error("❌ Network Error:", apiError);
+            console.error("Network Error:", apiError);
             Alert.alert("System Error", "An unexpected error occurred.");
-        } finally {
             setIsLoading(false);
         }
     };

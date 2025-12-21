@@ -59,58 +59,6 @@ const CreatorDashboardScreen = () => {
     }
   }, [isFocused, route.params]);
 
-  const awardCreatorProfileBonus = async (userId) => {
-    try {
-      const { data: walletData, error: walletError } = await supabase
-        .from('user_profiles')
-        .select('wallet_balance, reward_reason')
-        .eq('user_id', userId)
-        .single();
-      
-      if (walletError) {
-        console.error('Error fetching wallet:', walletError);
-        return false;
-      }
-      
-      // Check if already received creator bonus
-      if (walletData?.reward_reason === 'Profile completion bonus (Creator)') {
-        console.log('Creator already received profile completion bonus');
-        return true;
-      }
-      
-      const currentBalance = walletData?.wallet_balance || 0;
-      const newBalance = currentBalance + 50;
-      
-      const { error: updateError } = await supabase
-        .from('user_profiles')
-        .update({ 
-          wallet_balance: newBalance,
-          last_reward_received: new Date().toISOString(),
-          reward_reason: 'Profile completion bonus (Creator)'
-        })
-        .eq('user_id', userId);
-      
-      if (updateError) {
-        console.error('Error updating wallet:', updateError);
-        return false;
-      }
-      
-      console.log(`✅ Creator awarded ₹50: ${currentBalance} → ${newBalance}`);
-      setWalletBalance(newBalance);
-      
-      Alert.alert(
-        "Profile Complete! 🎉",
-        "₹50 has been added to your wallet for completing your profile.\n\nYou can now create surveys!",
-        [{ text: "OK" }]
-      );
-      
-      return true;
-    } catch (error) {
-      console.error('Error in awardCreatorProfileBonus:', error);
-      return false;
-    }
-  };
-
   const checkProfileCompletion = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -174,11 +122,10 @@ const CreatorDashboardScreen = () => {
         return false;
       }
 
-      const userRole = user.user_metadata?.user_role;
-      if (userRole === 'creator') {
-        await awardCreatorProfileBonus(user.id);
-      }
-
+      // ✅ FIXED: Don't auto-award here - award only happens in InterestAndHobbiesScreen
+      // This prevents double awarding when clicking + sign
+      console.log('✅ Profile complete, allowing survey creation');
+      
       return true;
     } catch (error) {
       console.error('Error checking profile:', error);
@@ -333,7 +280,7 @@ const CreatorDashboardScreen = () => {
   };
 
   const handleNavigateToWallet = () => {
-    navigation.navigate('WalletScreen');
+    navigation.navigate('WalletScreen', { walletBalance });
   };
 
   if (loading && !refreshing) {

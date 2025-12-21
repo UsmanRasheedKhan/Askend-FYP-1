@@ -38,10 +38,7 @@ const ContactInfoScreen = ({ navigation }) => {
 
     // Handle CNIC input change
     const handleCNICChange = (text) => {
-        // Only allow numbers
         const cleaned = text.replace(/[^\d]/g, '');
-        
-        // Limit to 13 digits
         const limited = cleaned.slice(0, 13);
         setCnic(limited);
         setCnicError("");
@@ -54,16 +51,11 @@ const ContactInfoScreen = ({ navigation }) => {
         const raw = (number || "").trim();
         if (!raw) return "Phone number is required.";
 
-        // remove spaces and dashes
         const cleaned = raw.replace(/[\s-]/g, "");
-
-        // digits-only (strip leading +)
         const digitsOnly = cleaned.replace(/^\+/, "").replace(/\D/g, "");
-
-        // helper: local 10-digit starting with 3 and operator 0-6
         const isValidLocal = (local) => /^3[0-6]\d{8}$/.test(local);
 
-        // +92XXXXXXXXXX => digitsOnly length 12 (92 + 10)
+        // +92XXXXXXXXXX
         if (/^\+92/.test(cleaned)) {
             if (digitsOnly.length !== 12)
                 return "Use +923XXXXXXXXX (country code +92 + 10 digits).";
@@ -73,18 +65,18 @@ const ContactInfoScreen = ({ navigation }) => {
             return "";
         }
 
-        // 0092XXXXXXXXXX => digitsOnly length 14 (00 92 + 10)
+        // 0092XXXXXXXXXX
         if (/^0092/.test(cleaned)) {
             if (digitsOnly.length !== 14)
                 return "Use 00923XXXXXXXXX (00 92 + 10 digits).";
-            const after00 = digitsOnly.slice(2); // '92XXXXXXXXXX'
-            const local = after00.slice(2); // remove '92'
+            const after00 = digitsOnly.slice(2);
+            const local = after00.slice(2);
             if (!isValidLocal(local))
                 return "Invalid Pakistani mobile number after country code.";
             return "";
         }
 
-        // National format starting with 0 => should be 11 digits and start with 03
+        // National format starting with 0
         if (/^0/.test(cleaned)) {
             const digits = cleaned.replace(/\D/g, "");
             if (digits.length !== 11)
@@ -111,7 +103,6 @@ const ContactInfoScreen = ({ navigation }) => {
         const raw = (id || "").trim();
         if (!raw) return "CNIC is required.";
 
-        // Check if it's exactly 13 digits
         if (!/^\d{13}$/.test(raw)) {
             return "CNIC must be exactly 13 digits.";
         }
@@ -123,18 +114,15 @@ const ContactInfoScreen = ({ navigation }) => {
         const segmentII = raw.slice(5, 12);
         const segmentIII = raw.slice(12);
 
-        // Segment I: first digit province code 1-8
         const provinceDigit = segmentI.charAt(0);
         if (!/^[1-8]$/.test(provinceDigit)) {
             return "CNIC must start with a valid province code (1-8).";
         }
 
-        // Segment II: not all zeros
         if (/^0+$/.test(segmentII)) {
             return "CNIC middle segment appears invalid.";
         }
 
-        // Segment III: single digit 0-9
         if (!/^[0-9]$/.test(segmentIII)) {
             return "Invalid CNIC check digit.";
         }
@@ -172,7 +160,6 @@ const ContactInfoScreen = ({ navigation }) => {
         setIsDetectingLocation(true);
 
         try {
-            // Request permission
             let { status } = await Location.requestForegroundPermissionsAsync();
             
             if (status !== 'granted') {
@@ -185,13 +172,6 @@ const ContactInfoScreen = ({ navigation }) => {
                 return;
             }
 
-            // Get current location
-            Alert.alert(
-                "Detecting Location",
-                "Getting your current location...",
-                [{ text: "OK" }]
-            );
-
             const locationResult = await Location.getCurrentPositionAsync({
                 accuracy: Location.Accuracy.High,
                 timeout: 20000,
@@ -199,7 +179,6 @@ const ContactInfoScreen = ({ navigation }) => {
 
             const { latitude, longitude } = locationResult.coords;
             
-            // Get address from coordinates
             const address = await Location.reverseGeocodeAsync({
                 latitude,
                 longitude,
@@ -209,7 +188,6 @@ const ContactInfoScreen = ({ navigation }) => {
             
             if (address && address[0]) {
                 const addr = address[0];
-                // Get city and country only
                 const city = addr.city || addr.region || addr.subregion || "";
                 const country = addr.country || "";
                 
@@ -220,11 +198,9 @@ const ContactInfoScreen = ({ navigation }) => {
                 } else if (country) {
                     locationString = country;
                 } else {
-                    // Fallback to coordinates if no city/country found
                     locationString = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
                 }
             } else {
-                // If reverse geocoding fails, use coordinates
                 locationString = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
             }
 
@@ -234,7 +210,6 @@ const ContactInfoScreen = ({ navigation }) => {
         } catch (error) {
             console.error('Location error:', error);
             
-            // Show specific error message
             let errorMessage = "Failed to detect location. ";
             
             if (error.message.includes("timeout")) {
@@ -258,7 +233,7 @@ const ContactInfoScreen = ({ navigation }) => {
     };
 
     // ----------------------------------------------------
-    // SAVE HANDLER - FIXED: Using location_coords column
+    // SAVE HANDLER - FIXED for location_coords column
     // ----------------------------------------------------
     const handleSave = async () => {
         if (!validateForm()) {
@@ -272,32 +247,30 @@ const ContactInfoScreen = ({ navigation }) => {
         setIsLoading(true);
 
         try {
-            // 1. Retrieve the profile ID and access token
             const profileId = await AsyncStorage.getItem('currentProfileId');
             if (!profileId) {
-                Alert.alert("Error", "Could not find profile ID. Please ensure Step 1 was completed and session is active.");
+                Alert.alert("Error", "Could not find profile ID. Please ensure Step 1 was completed.");
                 setIsLoading(false);
                 return;
             }
 
             const { data: { session }, error: sessionError } = await supabase.auth.getSession();
             if (sessionError || !session || !session.access_token) {
-                Alert.alert("Auth Error", "User session expired or not found. Please log in again.");
+                Alert.alert("Auth Error", "User session expired or not found.");
                 setIsLoading(false);
                 return;
             }
 
-            // 2. Prepare the update payload - USE location_coords NOT location
+            // FIXED: Save to location_coords column
             const payload = {
                 mobile_number: phoneNumber, 
                 cnic_number: cnic,
-                location_coords: location, // ✅ CORRECT: Use location_coords column
+                location_coords: location, // ✅ CORRECT: Using location_coords
                 profile_completed_step: 2,
             };
 
             console.log('Saving contact info with payload:', payload);
 
-            // 3. Perform the REST API UPDATE (PATCH request)
             const url = `${REST_API_URL}?id=eq.${profileId}`;
 
             const response = await fetch(url, {
@@ -306,20 +279,17 @@ const ContactInfoScreen = ({ navigation }) => {
                 body: JSON.stringify(payload),
             });
 
-            // 4. Handle response
             if (response.ok) {
-                console.log('Contact info successfully updated via REST API.');
-
-                // 5. Navigate to the next screen (Step 3: Professional Info)
+                console.log('✅ Contact info successfully updated.');
                 navigation.navigate('ProfessionalInfo');
             } else {
                 const errorText = await response.text();
-                console.error('REST API Update Error:', response.status, errorText);
+                console.error('❌ REST API Update Error:', response.status, errorText);
                 
                 let errorMessage = `Could not update contact info (Status: ${response.status}).`;
                 
                 if (response.status === 400) {
-                    errorMessage = "Bad request. Please check if all required columns exist in your database.";
+                    errorMessage = "Bad request. Please check your database columns.";
                 }
                 
                 Alert.alert("Save Error", errorMessage);
@@ -332,10 +302,6 @@ const ContactInfoScreen = ({ navigation }) => {
             setIsLoading(false);
         }
     };
-
-    // ----------------------------------------------------
-    // RENDER
-    // ----------------------------------------------------
 
     return (
         <View style={styles.container}>

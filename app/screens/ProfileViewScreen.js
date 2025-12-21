@@ -17,8 +17,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../../supabaseClient";
 
 const SUPABASE_URL = "https://oyavjqycsjfcnzlshdsu.supabase.co";
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95YXZqcXljc2pmY256bHNoZHN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxNTgwMjcsImV4cCI6MjA3NTczNDAyN30.22cwyIWSBmhLefCvobdbH42cPSTnw_NmSwbwaYvyLy4";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95YXZqcXljc2pmY256bHNoZHN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxNTgwMjcsImV4cCI6MjA3NTczNDAyN30.22cwyIWSBmhLefCvobdbH42cPSTnw_NmSwbwaYvyLy4";
 const USER_PROFILES_URL = `${SUPABASE_URL}/rest/v1/user_profiles`;
 
 const InfoRow = ({ label, value }) => {
@@ -120,6 +119,7 @@ const ProfileViewScreen = ({ navigation, route }) => {
   const [switchingRole, setSwitchingRole] = useState(false);
   const [showRoleSwitchModal, setShowRoleSwitchModal] = useState(false);
   const [switchedFrom, setSwitchedFrom] = useState('');
+  const [walletBalance, setWalletBalance] = useState(0);
 
   useEffect(() => {
     fetchProfileData();
@@ -165,6 +165,11 @@ const ProfileViewScreen = ({ navigation, route }) => {
         if (data.length > 0) {
           const profile = data[0];
           setProfileData(profile);
+          
+          // Get wallet balance
+          if (profile.wallet_balance !== undefined) {
+            setWalletBalance(profile.wallet_balance);
+          }
 
           if (profile.full_name)
             setUserInitials(getUserInitials(profile.full_name));
@@ -177,6 +182,8 @@ const ProfileViewScreen = ({ navigation, route }) => {
           } else {
             setUserRole("filler");
           }
+          
+          console.log('✅ Profile loaded successfully');
         } else {
           Alert.alert(
             "Profile Not Found",
@@ -218,12 +225,13 @@ const ProfileViewScreen = ({ navigation, route }) => {
     }
   };
 
-  const formatIncome = (income) =>
-    !income ? "Not provided" : `Rs ${income.toLocaleString()}`;
+  const formatIncome = (income) => {
+    if (income === null || income === undefined || income === 0) return "Not provided";
+    return `Rs ${income.toLocaleString()}`;
+  };
 
   const formatLocation = (location) => {
     if (!location) return "Not provided";
-    if (location.includes(",")) return "Location set";
     return location;
   };
 
@@ -244,28 +252,14 @@ const ProfileViewScreen = ({ navigation, route }) => {
       navigation.reset({
         index: 0,
         routes: [{ 
-          name: "FillerDashboard",
-          params: {
-            isProfileComplete: profileData && 
-              profileData.full_name && 
-              profileData.gender && 
-              profileData.date_of_birth && 
-              profileData.marital_status
-          }
+          name: "FillerDashboard"
         }],
       });
     } else if (userRole === "creator") {
       navigation.reset({
         index: 0,
         routes: [{ 
-          name: "CreatorDashboard",
-          params: {
-            isProfileComplete: profileData && 
-              profileData.full_name && 
-              profileData.gender && 
-              profileData.date_of_birth && 
-              profileData.marital_status
-          }
+          name: "CreatorDashboard"
         }],
       });
     } else {
@@ -274,11 +268,7 @@ const ProfileViewScreen = ({ navigation, route }) => {
   };
 
   const handleNavigateToWallet = () => {
-    try {
-      navigation.navigate("WalletScreen");
-    } catch (error) {
-      Alert.alert("Coming Soon", "Wallet feature will be available soon!");
-    }
+    navigation.navigate("WalletScreen", { walletBalance });
   };
 
   const handleNavigateToProfile = () => {};
@@ -322,10 +312,7 @@ const ProfileViewScreen = ({ navigation, route }) => {
       setUserRole(newRole);
       setShowRoleDropdown(false);
       
-      // Set the switched from role for modal
       setSwitchedFrom(oldRole);
-      
-      // Show role switch modal
       setShowRoleSwitchModal(true);
       
     } catch (error) {
@@ -339,7 +326,6 @@ const ProfileViewScreen = ({ navigation, route }) => {
   const handleRoleSwitchModalClose = () => {
     setShowRoleSwitchModal(false);
     
-    // Navigate to appropriate dashboard
     if (userRole === "filler") {
       navigation.reset({
         index: 0,
@@ -347,11 +333,7 @@ const ProfileViewScreen = ({ navigation, route }) => {
           name: "FillerDashboard",
           params: { 
             switchedFromCreator: switchedFrom === 'creator',
-            isProfileComplete: profileData && 
-              profileData.full_name && 
-              profileData.gender && 
-              profileData.date_of_birth && 
-              profileData.marital_status
+            refreshKey: Date.now()
           }
         }],
       });
@@ -361,11 +343,7 @@ const ProfileViewScreen = ({ navigation, route }) => {
         routes: [{ 
           name: "CreatorDashboard",
           params: { 
-            isProfileComplete: profileData && 
-              profileData.full_name && 
-              profileData.gender && 
-              profileData.date_of_birth && 
-              profileData.marital_status
+            refreshKey: Date.now()
           }
         }],
       });
@@ -378,58 +356,6 @@ const ProfileViewScreen = ({ navigation, route }) => {
     userRole === "creator"
       ? "Switch to Filler Account"
       : "Switch to Creator Account";
-
-  const handleEditProfile = () => {
-    if (!profileData) {
-      Alert.alert("Error", "Profile data not loaded yet.");
-      return;
-    }
-    
-    const profileComplete = profileData && 
-      profileData.full_name && 
-      profileData.gender && 
-      profileData.date_of_birth && 
-      profileData.marital_status &&
-      profileData.mobile_number &&
-      profileData.cnic_number &&
-      profileData.education &&
-      profileData.profession;
-    
-    if (profileComplete) {
-      Alert.alert(
-        "Edit Profile",
-        "Your profile is already complete. Would you like to view it or edit specific sections?",
-        [
-          {
-            text: "View Profile",
-            onPress: () => {
-              // Already on profile view
-            }
-          },
-          {
-            text: "Edit Profile",
-            onPress: () => {
-              navigation.navigate("ProfileCompletionScreen", {
-                userRole: userRole,
-                comingFrom: 'profile_edit',
-                prefilledName: profileData.full_name
-              });
-            }
-          },
-          {
-            text: "Cancel",
-            style: "cancel"
-          }
-        ]
-      );
-    } else {
-      navigation.navigate("ProfileCompletionScreen", {
-        userRole: userRole,
-        comingFrom: 'profile_view',
-        prefilledName: profileData.full_name
-      });
-    }
-  };
 
   if (loading && !refreshing)
     return (
@@ -488,6 +414,7 @@ const ProfileViewScreen = ({ navigation, route }) => {
           >
             <MaterialIcons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
+          
           <TouchableOpacity
             style={styles.logoutButtonHeader}
             onPress={handleLogout}
@@ -510,19 +437,6 @@ const ProfileViewScreen = ({ navigation, route }) => {
             </Text>
             <Text style={styles.userEmailText}>{userEmail}</Text>
           </View>
-          
-          <TouchableOpacity
-            style={styles.editProfileButton}
-            onPress={handleEditProfile}
-          >
-            <LinearGradient
-              colors={["#FF7E1D", "#FFD464"]}
-              style={styles.editProfileButtonGradient}
-            >
-              <MaterialIcons name="edit" size={18} color="#fff" />
-              <Text style={styles.editProfileButtonText}>Edit Profile</Text>
-            </LinearGradient>
-          </TouchableOpacity>
         </View>
       </LinearGradient>
 
@@ -600,7 +514,7 @@ const ProfileViewScreen = ({ navigation, route }) => {
             </View>
           )}
 
-        {/* Account Information at the END */}
+        {/* Account Information */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeaderContainer}>
             <SectionHeader
@@ -629,7 +543,7 @@ const ProfileViewScreen = ({ navigation, route }) => {
             >
               {switchingRole ? (
                 <ActivityIndicator size="small" color="#FF7E1D" />
-              ) : (
+              ): (
                 <LinearGradient
                   colors={["#FF7E1D", "#FFD464"]}
                   style={styles.editRoleButtonGradient}
@@ -647,8 +561,8 @@ const ProfileViewScreen = ({ navigation, route }) => {
             <MaterialIcons name="info" size={16} color="#FF7E1D" />
             <Text style={styles.roleInfoText}>
               {userRole === "creator"
-                ? "You can create and manage surveys."
-                : "You can participate in surveys and earn rewards."}
+                ? "You can create and manage surveys. Your profile data will be used for survey targeting."
+                : "You can participate in surveys and earn rewards. Available surveys are filtered based on your profile."}
             </Text>
           </View>
         </View>
@@ -802,7 +716,7 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
   },
   userInitialsText: { fontSize: 28, fontWeight: "bold", color: "#FFFFFF" },
-  userTextContainer: { alignItems: "center", marginBottom: 15 },
+  userTextContainer: { alignItems: "center", marginBottom: 10 },
   usernameText: {
     fontSize: 24,
     fontWeight: "bold",
@@ -815,24 +729,6 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.9)",
     textAlign: "center",
     marginBottom: 4,
-  },
-  editProfileButton: {
-    marginTop: 10,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  editProfileButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-  },
-  editProfileButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
   },
   loadingContainer: {
     flex: 1,

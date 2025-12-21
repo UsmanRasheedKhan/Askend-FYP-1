@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
     StyleSheet, 
     View, 
@@ -462,6 +462,19 @@ const parseDemographicFilters = (rawFilters) => {
     return {};
 };
 
+const TabItem = ({ iconName, label, isCurrent, onPress }) => (
+    <TouchableOpacity style={styles.tabItem} onPress={onPress}>
+        <MaterialCommunityIcons 
+            name={iconName} 
+            size={26}
+            color={isCurrent ? '#fff' : 'rgba(255, 255, 255, 0.6)'} 
+        />
+        <Text style={[styles.tabLabel, { color: isCurrent ? '#fff' : 'rgba(255, 255, 255, 0.6)' }]}>
+            {label}
+        </Text>
+    </TouchableOpacity>
+);
+
 const FillerDashboardScreen = ({ navigation, route }) => {
     const [walletBalance, setWalletBalance] = useState(0);
     const [isProfileComplete, setIsProfileComplete] = useState(false);
@@ -554,18 +567,28 @@ const FillerDashboardScreen = ({ navigation, route }) => {
             if (data && data.length > 0) {
                 const profile = data[0];
                 
+                // ✅ FIXED: Better username extraction
                 if (profile.full_name && profile.full_name.trim() !== '') {
                     const firstName = profile.full_name.split(' ')[0];
                     setUserName(firstName);
                 } else {
-                    setUserName('');
+                    // Fallback to auth user metadata
+                    const authName = session.user.user_metadata?.full_name;
+                    if (authName) {
+                        const firstName = authName.split(' ')[0];
+                        setUserName(firstName);
+                    } else {
+                        setUserName('User'); // Default fallback
+                    }
                 }
                 
                 const age = calculateAge(profile.date_of_birth);
                 
+                // Check if user already got profile completion bonus
                 const hasReceivedBonus = profile.reward_reason && 
                     (profile.reward_reason.includes('Profile completion bonus'));
                 
+                // Check profile completion for FILLER
                 const requiredFieldsForFiller = [
                     'full_name', 'gender', 'date_of_birth', 'marital_status', 
                     'mobile_number', 'cnic_number', 'education', 'profession'
@@ -575,10 +598,10 @@ const FillerDashboardScreen = ({ navigation, route }) => {
                     profile[field] && profile[field].toString().trim() !== ''
                 );
                 
-                const isComplete = filledFields.length === requiredFieldsForFiller.length;
-                setIsProfileComplete(isComplete);
+                const isProfileComplete = filledFields.length === requiredFieldsForFiller.length;
+                setIsProfileComplete(isProfileComplete);
                 
-                if (isComplete && !hasReceivedBonus) {
+                if (isProfileComplete && !hasReceivedBonus) {
                     const userRole = session.user.user_metadata?.user_role;
                     if (userRole === 'filler') {
                         showTemporaryGreenCard();
@@ -738,6 +761,35 @@ const FillerDashboardScreen = ({ navigation, route }) => {
         }
     }, []);
 
+    const fetchWalletBalance = useCallback(async () => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return 0;
+
+            const response = await fetch(
+                `${USER_PROFILES_URL}?user_id=eq.${session.user.id}&select=wallet_balance`,
+                {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    return data[0].wallet_balance || 0;
+                }
+            }
+            return 0;
+        } catch (error) {
+            console.error('❌ Error fetching wallet balance:', error);
+            return 0;
+        }
+    }, []);
+
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
         await loadDashboardData();
@@ -748,6 +800,16 @@ const FillerDashboardScreen = ({ navigation, route }) => {
         setLoading(true);
         
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                setLoading(false);
+                return;
+            }
+
+            // Fetch wallet balance first
+            const walletBal = await fetchWalletBalance();
+            setWalletBalance(walletBal);
+
             const [userProfileData, completedSurveysResult] = await Promise.all([
                 fetchUserProfile(),
                 fetchCompletedSurveys()
@@ -761,9 +823,6 @@ const FillerDashboardScreen = ({ navigation, route }) => {
             if (completedSurveysResult) {
                 setCompletedSurveyIds(completedSurveysResult.ids || new Set());
                 setCompletedResponsesMap(completedSurveysResult.responses || new Map());
-                setWalletBalance(completedSurveysResult.totalReward || 0);
-            } else {
-                setWalletBalance(0);
             }
             
         } catch (error) {
@@ -771,7 +830,7 @@ const FillerDashboardScreen = ({ navigation, route }) => {
         } finally {
             setLoading(false);
         }
-    }, [fetchUserProfile, fetchCompletedSurveys, fetchAvailableSurveys]);
+    }, [fetchUserProfile, fetchCompletedSurveys, fetchAvailableSurveys, fetchWalletBalance]);
 
     useEffect(() => {
         loadDashboardData();
@@ -797,11 +856,8 @@ const FillerDashboardScreen = ({ navigation, route }) => {
         }
 
         if (awardedAmount > 0) {
-            setWalletBalance(prev => {
-                const newBalance = prev + awardedAmount;
-                console.log(`✅ Wallet updated: ${prev} + ${awardedAmount} = ${newBalance}`);
-                return newBalance;
-            });
+            // Force reload dashboard data to get updated wallet balance
+            loadDashboardData();
             needsParamClear = true;
         }
 
@@ -1086,19 +1142,6 @@ const FillerDashboardScreen = ({ navigation, route }) => {
         </View>
     );
 };
-
-const TabItem = ({ iconName, label, isCurrent, onPress }) => (
-    <TouchableOpacity style={styles.tabItem} onPress={onPress}>
-        <MaterialCommunityIcons 
-            name={iconName} 
-            size={26}
-            color={isCurrent ? '#fff' : 'rgba(255, 255, 255, 0.6)'} 
-        />
-        <Text style={[styles.tabLabel, { color: isCurrent ? '#fff' : 'rgba(255, 255, 255, 0.6)' }]}>
-            {label}
-        </Text>
-    </TouchableOpacity>
-);
 
 const styles = StyleSheet.create({
     container: { 

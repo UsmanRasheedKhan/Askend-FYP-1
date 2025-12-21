@@ -198,8 +198,6 @@ const ProfileCompletionScreen = ({ navigation, route }) => {
 
             const userRole = session.user.user_metadata?.user_role || 'filler';
             console.log("User role detected:", userRole);
-            
-            const comingFrom = route.params?.comingFrom || 'profile';
 
             const formattedDobString = dob.toISOString().split("T")[0];
 
@@ -229,17 +227,18 @@ const ProfileCompletionScreen = ({ navigation, route }) => {
 
                     await AsyncStorage.setItem("currentProfileId", profileId.toString());
                     
+                    // ✅ FIXED: Navigate based on user role
                     if (userRole === 'creator') {
                         navigation.navigate("ContactInfo", {
                             shouldAwardBonus: true,
                             userRole: 'creator',
-                            comingFrom: comingFrom
+                            comingFrom: 'creator_profile'
                         });
                     } else {
                         navigation.navigate("ContactInfo", {
                             shouldAwardBonus: true,
                             userRole: 'filler',
-                            comingFrom: comingFrom
+                            comingFrom: 'filler_profile'
                         });
                     }
                     
