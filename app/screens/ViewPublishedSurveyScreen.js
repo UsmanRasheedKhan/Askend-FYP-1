@@ -287,118 +287,126 @@ const ViewPublishedSurveyScreen = ({ navigation, route }) => {
   };
 
   const handleSubmit = async () => {
-    if (!isFillMode || isSubmitting) {
-      return;
+  if (!isFillMode || isSubmitting) {
+    return;
+  }
+
+  const missing = validateResponses();
+  if (missing.length) {
+    const previewList = missing.slice(0, 3).map(item => `• ${item}`).join('\n');
+    const suffix = missing.length > 3 ? '\n• ...and more' : '';
+    Alert.alert(
+      'Complete Required Questions',
+      `${previewList}${suffix}` || 'Please answer all required questions.',
+    );
+    return;
+  }
+
+  try {
+    setIsSubmitting(true);
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      throw sessionError;
     }
 
-    const missing = validateResponses();
-    if (missing.length) {
-      const previewList = missing.slice(0, 3).map(item => `• ${item}`).join('\n');
-      const suffix = missing.length > 3 ? '\n• ...and more' : '';
-      Alert.alert(
-        'Complete Required Questions',
-        `${previewList}${suffix}` || 'Please answer all required questions.',
-      );
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-
-      if (sessionError) {
-        throw sessionError;
-      }
-
-      const session = sessionData?.session;
-      if (!session) {
-        Alert.alert('Authentication Required', 'Please sign in again to submit responses.');
-        setIsSubmitting(false);
-        return;
-      }
-
-      const surveyIdNumeric = Number(surveyData?.id || surveyIdFromParams);
-      if (!surveyIdNumeric) {
-        Alert.alert('Missing Survey', 'Unable to determine which survey to submit.');
-        setIsSubmitting(false);
-        return;
-      }
-
-      const { data: existingRows, error: existingError } = await supabase
-        .from('survey_responses')
-        .select('id')
-        .eq('survey_id', surveyIdNumeric)
-        .eq('user_id', session.user.id);
-
-      if (existingError) {
-        throw existingError;
-      }
-
-      if (Array.isArray(existingRows) && existingRows.length > 0) {
-        Alert.alert('Already Filled', 'You have already submitted this survey.');
-        setIsSubmitting(false);
-        return;
-      }
-
-      const formattedAnswers = questions.map((question, index) => ({
-        questionId: question?.id || question?.questionId || index + 1,
-        questionText: question?.questionText || `Question ${index + 1}`,
-        questionType: question?.questionType || 'text',
-        answer: responses[getQuestionKey(question, index)] ?? null,
-      }));
-
-      const timeTakenSeconds = Math.max(1, Math.round((Date.now() - (fillStartRef.current || Date.now())) / 1000));
-      const deviceInfo = `${Platform.OS} ${Platform.Version || ''}`.trim();
-
-      const rewardValue = Number(surveyData?.price) || 0;
-
-      const { error: insertError } = await supabase
-        .from('survey_responses')
-        .insert([
-          {
-            survey_id: surveyIdNumeric,
-            user_id: session.user.id,
-            response_data: formattedAnswers,
-            status: 'completed',
-            completed_at: new Date().toISOString(),
-            time_taken_seconds: timeTakenSeconds,
-            device_info: deviceInfo,
-            reward_amount: rewardValue,
-            payment_status: 'pending',
-          },
-        ]);
-
-      if (insertError) {
-        throw insertError;
-      }
-
-      const currentCount = Number(surveyData?.responses_collected ?? surveyData?.responsesCollected ?? 0);
-      const nextCount = currentCount + 1;
-
-      await supabase
-        .from('surveys')
-        .update({ responses_collected: nextCount })
-        .eq('id', surveyIdNumeric);
-
-      setSurveyData(prev => ({
-        ...prev,
-        responses_collected: nextCount,
-        responsesCollected: nextCount,
-      }));
-
-      navigation.navigate('FillerDashboard', {
-        refreshKey: Date.now(),
-        defaultSurveyTab: 'filled',
-        successSurveyTitle: formHeading,
-        awardedAmount: rewardValue,
-      });
-    } catch (error) {
-      console.error('Error submitting responses:', error);
-      Alert.alert('Submission Failed', error.message || 'Unable to submit responses. Please try again.');
-    } finally {
+    const session = sessionData?.session;
+    if (!session) {
+      Alert.alert('Authentication Required', 'Please sign in again to submit responses.');
       setIsSubmitting(false);
+      return;
     }
-  };
+
+    const surveyIdNumeric = Number(surveyData?.id || surveyIdFromParams);
+    if (!surveyIdNumeric) {
+      Alert.alert('Missing Survey', 'Unable to determine which survey to submit.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const { data: existingRows, error: existingError } = await supabase
+      .from('survey_responses')
+      .select('id')
+      .eq('survey_id', surveyIdNumeric)
+      .eq('user_id', session.user.id);
+
+    if (existingError) {
+      throw existingError;
+    }
+
+    if (Array.isArray(existingRows) && existingRows.length > 0) {
+      Alert.alert('Already Filled', 'You have already submitted this survey.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const formattedAnswers = questions.map((question, index) => ({
+      questionId: question?.id || question?.questionId || index + 1,
+      questionText: question?.questionText || `Question ${index + 1}`,
+      questionType: question?.questionType || 'text',
+      answer: responses[getQuestionKey(question, index)] ?? null,
+    }));
+
+    const timeTakenSeconds = Math.max(1, Math.round((Date.now() - (fillStartRef.current || Date.now())) / 1000));
+    const deviceInfo = `${Platform.OS} ${Platform.Version || ''}`.trim();
+    const rewardValue = Number(surveyData?.price) || 0;
+
+    // ✅ CORRECT: payment_status 'paid' set karein
+    const { error: insertError } = await supabase
+      .from('survey_responses')
+      .insert([
+        {
+          survey_id: surveyIdNumeric,
+          user_id: session.user.id,
+          response_data: formattedAnswers,
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          time_taken_seconds: timeTakenSeconds,
+          device_info: deviceInfo,
+          reward_amount: rewardValue,
+          payment_status: 'paid', // ✅ YAHAN CHANGE
+        },
+      ]);
+
+    if (insertError) {
+      throw insertError;
+    }
+
+    const currentCount = Number(surveyData?.responses_collected ?? surveyData?.responsesCollected ?? 0);
+    const nextCount = currentCount + 1;
+
+    await supabase
+      .from('surveys')
+      .update({ responses_collected: nextCount })
+      .eq('id', surveyIdNumeric);
+
+    setSurveyData(prev => ({
+      ...prev,
+      responses_collected: nextCount,
+      responsesCollected: nextCount,
+    }));
+
+    // ✅ Show success message
+    Alert.alert(
+      'Success!',
+      `Survey submitted successfully! Rs ${rewardValue} has been credited to your wallet.`,
+      [{ text: 'OK' }]
+    );
+
+    navigation.navigate('FillerDashboard', {
+      refreshKey: Date.now(),
+      defaultSurveyTab: 'filled',
+      successSurveyTitle: formHeading,
+      awardedAmount: rewardValue,
+      showPaymentSuccess: true, // ✅ YEH BHI ADD KAREIN
+    });
+  } catch (error) {
+    console.error('Error submitting responses:', error);
+    Alert.alert('Submission Failed', error.message || 'Unable to submit responses. Please try again.');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   useEffect(() => {
     console.log('ViewPublishedSurvey received data:', surveyData);
