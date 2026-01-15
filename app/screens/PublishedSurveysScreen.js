@@ -446,7 +446,7 @@ const PublishedSurveysScreen = () => {
       `🌐 Type: ${survey.isPublicForm ? "Public Form" : "Private Form"}\n` +
       `📈 Progress: ${survey.responsesCollected}/${survey.totalResponses} responses\n` +
       `🎯 Completion: ${progressPercentage.toFixed(1)}%\n` +
-      `💰 Estimated Value: Rs ${survey.price}\n` +
+      `💰 Estimated Value: PKR ${survey.price}\n` +
       `📅 Published: ${formatDate(survey.createdAt)}\n` +
       `🔄 Last Updated: ${formatDate(survey.updatedAt)}\n` +
       `👤 User ID: ${survey.user_id?.substring(0, 8)}...`,
@@ -736,7 +736,7 @@ const PublishedSurveysScreen = () => {
               <View style={styles.statCard}>
                 <MaterialIcons name="attach-money" size={30} color="#7C58FF" />
                 <Text style={styles.statNumber}>
-                  Rs {publishedSurveys.reduce((sum, survey) => sum + survey.price, 0)}
+                  PKR {publishedSurveys.reduce((sum, survey) => sum + survey.price, 0)}
                 </Text>
                 <Text style={styles.statLabel}>Total Value</Text>
               </View>

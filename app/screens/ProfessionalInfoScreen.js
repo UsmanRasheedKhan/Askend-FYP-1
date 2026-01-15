@@ -108,7 +108,7 @@ const ProfessionalInfoScreen = ({ navigation }) => {
     // ========== HELPER FUNCTIONS ==========
     const formatIncome = (amount) => {
         if (!amount || amount === 0) return "Not provided";
-        return `Rs ${amount.toLocaleString()}`;
+        return `PKR ${amount.toLocaleString()}`;
     };
     
     const closeAllDropdowns = () => {

@@ -270,7 +270,7 @@ const RegularProfileCard = ({ isProfileComplete, navigation }) => {
                 </View>
                 
                 <LinearGradient colors={['#FF7E1D', '#FFD464']} style={styles.solidCardButton}>
-                    <Text style={styles.cardButtonText}>+ Rs. 50</Text>
+                    <Text style={styles.cardButtonText}>+ PKR 50</Text>
                 </LinearGradient>
             </View>
         </TouchableOpacity>
@@ -293,16 +293,51 @@ const getCategoryColor = (category) => {
     return colors[category] || '#FF7E1D';
 };
 
-const AvailableSurveyCard = ({ survey, onPress, completed, allowViewing = false }) => {
+// Check if survey category matches user's interests/hobbies
+const checkInterestMatch = (surveyCategory, userHobbiesData) => {
+    if (!userHobbiesData || !surveyCategory) {
+        return false; // No interests selected or no category
+    }
+
+    // Map survey categories to interest categories
+    const categoryToInterestMap = {
+        'Customer Feedback': ['digital', 'food', 'fashion', 'automotive'],
+        'Market Research': ['digital', 'finance', 'fashion', 'automotive', 'food'],
+        'Employee Satisfaction': ['finance', 'digital'],
+        'Product Feedback': ['digital', 'fashion', 'automotive', 'food'],
+        'Academic Research': ['reading', 'digital', 'art'],
+        'Event Feedback': ['travel', 'food', 'art', 'streaming'],
+        'Healthcare Survey': ['fitness', 'food', 'gardening'],
+        'User Experience': ['digital', 'streaming'],
+        'Brand Awareness': ['fashion', 'automotive', 'digital', 'food'],
+        'Social Research': ['reading', 'art', 'digital', 'streaming']
+    };
+
+    const relatedInterests = categoryToInterestMap[surveyCategory] || [];
+    
+    // Check if user has any of the related interests
+    for (const interest of relatedInterests) {
+        if (userHobbiesData[interest] && userHobbiesData[interest].length > 0) {
+            return true;
+        }
+    }
+    
+    return false;
+};
+
+const AvailableSurveyCard = ({ survey, onPress, completed, allowViewing = false, matchesInterest = true }) => {
     const cardGradientColors = completed ? ['#38C172', '#69e09d'] : ['#FF7E1D', '#FFD464'];
     const cardIcon = completed ? 'check-circle' : 'description';
-    const cardBorderColor = completed ? '#38C172' : '#FF7E1D';
-    const cardBackgroundColor = completed ? '#38C17224' : '#F6B93B24';
+    const cardBorderColor = completed ? '#38C172' : matchesInterest ? '#FF7E1D' : '#CCCCCC';
+    const cardBackgroundColor = completed ? '#38C17224' : matchesInterest ? '#F6B93B24' : '#F5F5F5';
     const cardDisabled = completed && !allowViewing;
+    const isGrayedOut = !matchesInterest && !completed;
     
     let surveyDescription = survey.description || 'Complete this survey and earn rewards';
     if (completed) {
         surveyDescription = 'You have completed this survey. Thank you!';
+    } else if (isGrayedOut) {
+        surveyDescription = 'This survey does not match your interests';
     }
     
     const progressPercentage = survey.totalResponses > 0 
@@ -318,37 +353,38 @@ const AvailableSurveyCard = ({ survey, onPress, completed, allowViewing = false 
                 styles.surveyCard, 
                 { 
                     backgroundColor: cardBackgroundColor, 
-                    borderColor: cardBorderColor 
+                    borderColor: cardBorderColor,
+                    opacity: isGrayedOut ? 0.6 : 1
                 }
             ]}
-            onPress={cardDisabled ? undefined : onPress}
-            disabled={cardDisabled}
-            activeOpacity={cardDisabled ? 1 : 0.8}
+            onPress={cardDisabled || isGrayedOut ? undefined : onPress}
+            disabled={cardDisabled || isGrayedOut}
+            activeOpacity={cardDisabled || isGrayedOut ? 1 : 0.8}
         >
             <View style={styles.cardHeader}>
                 <LinearGradient
-                    colors={cardGradientColors}
+                    colors={isGrayedOut ? ['#999999', '#CCCCCC'] : cardGradientColors}
                     style={styles.iconGradientContainer}
                 >
                     <MaterialIcons 
-                        name={cardIcon} 
+                        name={isGrayedOut ? 'lock' : cardIcon} 
                         size={24} 
                         color="#fff" 
                     />
                 </LinearGradient>
                 
                 <View style={styles.cardContent}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>
+                    <Text style={[styles.cardTitle, isGrayedOut && { color: '#999' }]} numberOfLines={1}>
                         {survey.title}
                     </Text>
                     <View style={styles.categoryRow}>
-                        <View style={[styles.categoryBadge, { backgroundColor: getCategoryColor(survey.category) }]}>
+                        <View style={[styles.categoryBadge, { backgroundColor: isGrayedOut ? '#CCCCCC' : getCategoryColor(survey.category) }]}>
                             <Text style={styles.categoryBadgeText}>{survey.category || 'General'}</Text>
                         </View>
                         
                         {hasFilters && (
                             <View style={styles.filterBadge}>
-                                <MaterialCommunityIcons name="filter" size={12} color="#FF7E1D" />
+                                <MaterialCommunityIcons name="filter" size={12} color={isGrayedOut ? '#999' : '#FF7E1D'} />
                                 <Text style={styles.filterBadgeText}>Filtered</Text>
                             </View>
                         )}
@@ -356,14 +392,14 @@ const AvailableSurveyCard = ({ survey, onPress, completed, allowViewing = false 
                 </View>
                 
                 <View style={styles.priceContainer}>
-                    <MaterialIcons name="account-balance-wallet" size={16} color={completed ? '#38C172' : '#FF7E1D'} />
-                    <Text style={[styles.priceText, { color: completed ? '#38C172' : '#FF7E1D' }]}>
-                        Rs {survey.price || '0'}
+                    <MaterialIcons name="account-balance-wallet" size={16} color={isGrayedOut ? '#999' : completed ? '#38C172' : '#FF7E1D'} />
+                    <Text style={[styles.priceText, { color: isGrayedOut ? '#999' : completed ? '#38C172' : '#FF7E1D' }]}>
+                        PKR {survey.price || '0'}
                     </Text>
                 </View>
             </View>
             
-            <Text style={styles.cardDescription} numberOfLines={2}>
+            <Text style={[styles.cardDescription, isGrayedOut && { color: '#999' }]} numberOfLines={2}>
                 {surveyDescription}
             </Text>
             
@@ -374,12 +410,12 @@ const AvailableSurveyCard = ({ survey, onPress, completed, allowViewing = false 
                             styles.progressFill,
                             { 
                                 width: `${Math.min(progressPercentage, 100)}%`,
-                                backgroundColor: progressPercentage >= 100 ? '#4CAF50' : '#FF7E1D'
+                                backgroundColor: progressPercentage >= 100 ? '#4CAF50' : isGrayedOut ? '#CCCCCC' : '#FF7E1D'
                             }
                         ]}
                     />
                 </View>
-                <Text style={styles.progressText}>
+                <Text style={[styles.progressText, isGrayedOut && { color: '#999' }]}>
                     {survey.responsesCollected}/{survey.totalResponses} responses
                 </Text>
             </View>
@@ -405,6 +441,11 @@ const AvailableSurveyCard = ({ survey, onPress, completed, allowViewing = false 
                             <Text style={styles.actionButtonText}>Completed</Text>
                         </View>
                     )
+                ) : isGrayedOut ? (
+                    <View style={[styles.actionButton, {backgroundColor: '#CCCCCC'}]}>
+                        <MaterialIcons name="lock" size={16} color="#fff" />
+                        <Text style={styles.actionButtonText}>Not Available</Text>
+                    </View>
                 ) : (
                     <TouchableOpacity 
                         style={styles.actionButton}
@@ -618,6 +659,7 @@ const FillerDashboardScreen = ({ navigation, route }) => {
                     marital_status: profile.marital_status,
                     city: profile.city,
                     monthly_income: profile.monthly_income,
+                    hobbies_data: profile.hobbies_data,
                 };
                 
                 console.log('👤 User profile loaded:', userProfileData);
@@ -1010,14 +1052,14 @@ const FillerDashboardScreen = ({ navigation, route }) => {
                             <Text style={styles.sectionTitle}>{sectionTitleText}</Text>
                         </View>
                         
-                        {isAvailableTab && userProfile && (
+                        {/* {isAvailableTab && userProfile && (
                             <View style={styles.profileInfo}>
                                 <MaterialCommunityIcons name="account-details" size={18} color="#666" />
                                 <Text style={styles.profileInfoText}>
                                     Showing surveys matching your profile: {userProfile.gender}, {userProfile.age} yrs
                                 </Text>
                             </View>
-                        )}
+                        )} */}
                         
                         {listToRender.length > 0 ? (
                             <>
@@ -1028,6 +1070,11 @@ const FillerDashboardScreen = ({ navigation, route }) => {
                                         ? () => handleViewSubmission(survey)
                                         : () => handleSurveyClick(survey);
 
+                                    // Check if survey matches user's interests
+                                    const matchesInterest = userProfile?.hobbies_data 
+                                        ? checkInterestMatch(survey.category, userProfile.hobbies_data)
+                                        : true; // If no interests set, show all surveys
+
                                     return (
                                         <AvailableSurveyCard
                                             key={survey.id}
@@ -1035,6 +1082,7 @@ const FillerDashboardScreen = ({ navigation, route }) => {
                                             completed={isCompleted}
                                             allowViewing={allowViewing}
                                             onPress={onPressHandler}
+                                            matchesInterest={matchesInterest}
                                         />
                                     );
                                 })}
@@ -1097,7 +1145,7 @@ const FillerDashboardScreen = ({ navigation, route }) => {
                             size={20} 
                             color="#FF7E1D" 
                         />
-                        <Text style={styles.walletText}>Rs {walletBalance}</Text>
+                        <Text style={styles.walletText}>PKR {walletBalance}</Text>
                     </TouchableOpacity>
                 </View>
             </LinearGradient>

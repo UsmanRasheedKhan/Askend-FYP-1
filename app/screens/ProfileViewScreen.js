@@ -227,7 +227,7 @@ const ProfileViewScreen = ({ navigation, route }) => {
 
   const formatIncome = (income) => {
     if (income === null || income === undefined || income === 0) return "Not provided";
-    return `Rs ${income.toLocaleString()}`;
+    return `PKR ${income.toLocaleString()}`;
   };
 
   const formatLocation = (location) => {

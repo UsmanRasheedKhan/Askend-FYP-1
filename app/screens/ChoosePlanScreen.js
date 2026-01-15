@@ -63,7 +63,7 @@ const PlanCard = ({ title, subtitle, price, responses, buttonText, gradient, ico
 
                 {/* Middle: Price and Responses */}
                 <View style={styles.priceRow}>
-                    <Text style={styles.priceText}>Rs {price}</Text>
+                    <Text style={styles.priceText}>PKR {price}</Text>
                     <Text style={styles.responsesText}>for {responses} responses</Text>
                 </View>
 
@@ -147,7 +147,7 @@ const CustomPlan = ({ isSelected, onSelect, customResponses, setCustomResponses 
                     <View style={styles.customPriceRow}>
                         <Text style={styles.priceLabel}>Estimated Cost:</Text>
                         <View style={styles.customPriceDisplay}>
-                            <Text style={styles.customPriceText}>Rs {cost || '0'}</Text>
+                            <Text style={styles.customPriceText}>PKR {cost || '0'}</Text>
                         </View>
                     </View>
                 </View>
@@ -213,7 +213,7 @@ const PaymentBar = ({ selectedPlan, planPrice, onPublish, customResponses, isPub
                     
                     <View style={styles.priceSection}>
                         <Text style={styles.totalLabel}>Total:</Text>
-                        <Text style={styles.totalAmount}>Rs {planPrice}</Text>
+                        <Text style={styles.totalAmount}>PKR {planPrice}</Text>
                     </View>
                 </View>
 

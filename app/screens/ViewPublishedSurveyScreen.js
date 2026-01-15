@@ -389,7 +389,7 @@ const ViewPublishedSurveyScreen = ({ navigation, route }) => {
     // ✅ Show success message
     Alert.alert(
       'Success!',
-      `Survey submitted successfully! Rs ${rewardValue} has been credited to your wallet.`,
+      `Survey submitted successfully! PKR ${rewardValue} has been credited to your wallet.`,
       [{ text: 'OK' }]
     );
 

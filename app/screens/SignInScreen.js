@@ -261,12 +261,12 @@ const SignInScreen = ({ navigation }) => {
                         onPress={() => setKeepLoggedIn(!keepLoggedIn)}
                         disabled={isLoading}
                     >
-                        <View
+                        {/* <View
                             style={[styles.checkbox, keepLoggedIn && styles.checkboxActive]}
                         >
                             {keepLoggedIn && <Text style={styles.checkmark}>✓</Text>}
                         </View>
-                        <Text style={styles.checkboxLabel}>Keep me logged in</Text>
+                        <Text style={styles.checkboxLabel}>Keep me logged in</Text> */}
                     </TouchableOpacity>
 
                     <TouchableOpacity 

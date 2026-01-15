@@ -129,8 +129,8 @@ const RoleSelectionScreen = ({ navigation }) => {
 
                     {/* --- 2. SIGN UP OPTIONS (Conditional) --- */}
                     {selectedRole && (
+                        
                         <View style={styles.signUpOptionsContainer}>
-                            
                             {/* Primary Button (Continue to Sign Up) */}
                             <TouchableOpacity 
                                 onPress={handleEmailSignUp} 
@@ -170,6 +170,12 @@ const RoleSelectionScreen = ({ navigation }) => {
                             </TouchableOpacity>
                         </View>
                     )}
+
+                {selectedRole && (
+                    <Text style={{ color: '#000000ff', fontSize: 14, textAlign: 'center', marginTop: 10, backgroundColor: 'rgba(193, 193, 194, 1)', padding: 8, borderRadius: 10 }}>
+                        You have selected the <Text style={{ fontWeight: 'bold' }}>{selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)}</Text> role. It can be changed later in settings.
+                    </Text>
+                )}
 
                 </View>
             </ScrollView>

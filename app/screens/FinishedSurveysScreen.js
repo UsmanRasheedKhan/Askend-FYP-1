@@ -309,7 +309,7 @@ const FinishedSurveysScreen = () => {
       `🌐 Type: ${survey.isPublicForm ? "Public Form" : "Private Form"}\n` +
       `✅ Final Results: ${survey.responsesCollected}/${survey.totalResponses} responses\n` +
       `🎯 Completion Rate: ${completionPercentage.toFixed(1)}%\n` +
-      `💰 Total Value: Rs ${survey.price}\n` +
+      `💰 Total Value: PKR ${survey.price}\n` +
       `📅 Originally Published: ${formatDate(survey.createdAt)}\n` +
       `🏁 Finished On: ${formatDate(survey.updatedAt)}`,
       [
@@ -421,7 +421,7 @@ const FinishedSurveysScreen = () => {
             <View style={styles.statItem}>
               <MaterialIcons name="attach-money" size={16} color="#666" />
               <Text style={styles.statText}>
-                Rs {survey.price}
+                PKR {survey.price}
               </Text>
             </View>
           </View>
@@ -577,7 +577,7 @@ const FinishedSurveysScreen = () => {
               <View style={styles.statCard}>
                 <MaterialIcons name="attach-money" size={30} color="#4CAF50" />
                 <Text style={styles.statNumber}>
-                  Rs {finishedSurveys.reduce((sum, survey) => sum + survey.price, 0)}
+                  PKR {finishedSurveys.reduce((sum, survey) => sum + survey.price, 0)}
                 </Text>
                 <Text style={styles.statLabel}>Total Value</Text>
               </View>

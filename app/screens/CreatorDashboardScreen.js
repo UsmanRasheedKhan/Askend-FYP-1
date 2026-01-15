@@ -320,7 +320,7 @@ const CreatorDashboardScreen = () => {
               onPress={handleNavigateToWallet}
             >
               <MaterialIcons name="account-balance-wallet" size={18} color="#FF7800" />
-              <Text style={styles.walletText}>Rs {walletBalance}</Text>
+              <Text style={styles.walletText}>PKR {walletBalance}</Text>
             </TouchableOpacity>
           </View>
         </View>

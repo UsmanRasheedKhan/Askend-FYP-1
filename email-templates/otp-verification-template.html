@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Askend - OTP Verification</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #FFD464 0%, #FF7E1D 100%);
+            padding: 20px;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #FF7E1D 0%, #FFD464 100%);
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        .header-icon {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+        
+        .header-icon-inner {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #FFD464 0%, #FF7E1D 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 5px 15px rgba(255, 126, 29, 0.4);
+        }
+        
+        .email-icon {
+            font-size: 30px;
+            color: #ffffff;
+        }
+        
+        .logo-text {
+            font-size: 32px;
+            font-weight: bold;
+            color: #ffffff;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tagline {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-top: 5px;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .greeting {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .message {
+            font-size: 16px;
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        
+        .otp-container {
+            background: linear-gradient(135deg, #FFF8E1 0%, #FEECE3 100%);
+            border: 3px solid #FF7E1D;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .otp-label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        
+        .otp-code {
+            font-size: 48px;
+            font-weight: bold;
+            color: #FF7E1D;
+            letter-spacing: 8px;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 2px 4px rgba(255, 126, 29, 0.2);
+        }
+        
+        .otp-validity {
+            font-size: 13px;
+            color: #888;
+            margin-top: 15px;
+        }
+        
+        .info-box {
+            background: #F5F5F5;
+            border-left: 4px solid #FF7E1D;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 25px 0;
+        }
+        
+        .info-box-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #FF7E1D;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .info-icon {
+            margin-right: 8px;
+        }
+        
+        .info-box-text {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.5;
+        }
+        
+        .security-tips {
+            margin-top: 30px;
+        }
+        
+        .security-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .security-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .security-list li {
+            font-size: 14px;
+            color: #666;
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+        
+        .security-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        
+        .footer {
+            background: #F9F9F9;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #EEEEEE;
+        }
+        
+        .footer-text {
+            font-size: 13px;
+            color: #888;
+            line-height: 1.6;
+        }
+        
+        .social-links {
+            margin: 20px 0;
+        }
+        
+        .social-link {
+            display: inline-block;
+            margin: 0 10px;
+            color: #FF7E1D;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .copyright {
+            font-size: 12px;
+            color: #AAA;
+            margin-top: 15px;
+        }
+        
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                border-radius: 0;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .otp-code {
+                font-size: 36px;
+                letter-spacing: 5px;
+            }
+            
+            .header {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-icon">
+                <div class="header-icon-inner">
+                    <span class="email-icon">📧</span>
+                </div>
+            </div>
+            <h1 class="logo-text">Askend</h1>
+            <p class="tagline">Create. Ask. Earn.</p>
+        </div>
+        
+        <!-- Content -->
+        <div class="content">
+            <h2 class="greeting">Password Reset Request</h2>
+            <p class="message">
+                We received a request to reset your password. Use the OTP code below to verify your identity and set a new password.
+            </p>
+            
+            <!-- OTP Code Box -->
+            <div class="otp-container">
+                <div class="otp-label">Your OTP Code</div>
+                <div class="otp-code">{{ .Token }}</div>
+                <div class="otp-validity">⏱ Valid for 10 minutes</div>
+            </div>
+            
+            <!-- Information Box -->
+            <div class="info-box">
+                <div class="info-box-title">
+                    <span class="info-icon">ℹ️</span>
+                    What happens next?
+                </div>
+                <div class="info-box-text">
+                    Enter this 6-digit code in the Askend app to verify your identity. You'll then be able to set a new password without leaving the app. The entire process is secure and takes just a minute!
+                </div>
+            </div>
+            
+            <!-- Security Tips -->
+            <div class="security-tips">
+                <div class="security-title">🔒 Security Tips</div>
+                <ul class="security-list">
+                    <li>Never share this code with anyone, including Askend staff</li>
+                    <li>This code expires in 10 minutes for your security</li>
+                    <li>If you didn't request this, please ignore this email</li>
+                    <li>Make sure you're using the official Askend app</li>
+                </ul>
+            </div>
+            
+            <p class="message" style="margin-top: 30px; font-size: 14px; color: #888;">
+                If you didn't request a password reset, you can safely ignore this email. Your account remains secure.
+            </p>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p class="footer-text">
+                <strong>Need Help?</strong><br>
+                Contact our support team at support@askend.com
+            </p>
+            
+            <div class="social-links">
+                <a href="#" class="social-link">Facebook</a>
+                <a href="#" class="social-link">Twitter</a>
+                <a href="#" class="social-link">Instagram</a>
+            </div>
+            
+            <p class="copyright">
+                © 2026 Askend. All rights reserved.<br>
+                This email was sent to {{ .Email }}
+            </p>
+        </div>
+    </div>
+</body>
+</html>

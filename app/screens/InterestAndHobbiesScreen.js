@@ -162,7 +162,7 @@ const SuccessRewardModal = ({ visible, onClose, awardedAmount, navigation, userR
           <View style={styles.notificationBox}>
             <MaterialIcons name="account-balance-wallet" size={20} color="#FF7E1D" />
             <Text style={styles.notificationText}>
-              Rs {awardedAmount} has been added to your wallet
+              PKR {awardedAmount} has been added to your wallet
             </Text>
           </View>
 
