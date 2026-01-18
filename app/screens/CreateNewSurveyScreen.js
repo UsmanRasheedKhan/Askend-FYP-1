@@ -252,6 +252,13 @@ const ICON_OPTIONS = [
     { name: 'alert-circle-outline', color: '#FF6B6B' }
 ];
 
+const defaultValidationErrors = {
+    formHeading: false,
+    formDescription: false,
+    category: false,
+    questions: {}
+};
+
 // --- MAIN SCREEN COMPONENT ---
 const CreateNewSurveyScreen = ({ navigation, route }) => {
     const [isPublicForm, setIsPublicForm] = useState(false);
@@ -310,12 +317,7 @@ const CreateNewSurveyScreen = ({ navigation, route }) => {
     const [showIconPickerModal, setShowIconPickerModal] = useState(false);
 
     // Validation states
-    const [validationErrors, setValidationErrors] = useState({
-        formHeading: false,
-        formDescription: false,
-        category: false,
-        questions: {}
-    });
+    const [validationErrors, setValidationErrors] = useState(defaultValidationErrors);
 
     // ✅ FIX: Add state to track if draft is already saved
     const [isSaving, setIsSaving] = useState(false);
@@ -550,12 +552,13 @@ const CreateNewSurveyScreen = ({ navigation, route }) => {
     };
 
     // Generic dropdown component
-    const renderDropdown = (options, selectedValue, showDropdown, setShowDropdown, onSelect, placeholder, disabled = false) => (
+    const renderDropdown = (options, selectedValue, showDropdown, setShowDropdown, onSelect, placeholder, disabled = false, hasError = false) => (
         <View style={styles.dropdownContainer}>
             <TouchableOpacity 
                 style={[
                     styles.dropdownInput,
-                    disabled && styles.disabledDropdown
+                    disabled && styles.disabledDropdown,
+                    hasError && styles.errorInput
                 ]}
                 onPress={() => {
                     if (disabled) return;
@@ -704,7 +707,7 @@ const CreateNewSurveyScreen = ({ navigation, route }) => {
         setQuestions(updatedQuestions);
 
         // Clear validation error for this question if text is now valid
-        if (validationErrors.questions[currentQuestionIndex]?.text && text.trim()) {
+        if (validationErrors.questions?.[currentQuestionIndex]?.text && text.trim()) {
             setValidationErrors(prev => ({
                 ...prev,
                 questions: {
@@ -732,7 +735,7 @@ const CreateNewSurveyScreen = ({ navigation, route }) => {
         const currentQuestion = updatedQuestions[currentQuestionIndex];
         const hasEmptyOptions = currentQuestion.options.some(option => !option.trim());
         
-        if (validationErrors.questions[currentQuestionIndex]?.options && !hasEmptyOptions) {
+        if (validationErrors.questions?.[currentQuestionIndex]?.options && !hasEmptyOptions) {
             setValidationErrors(prev => ({
                 ...prev,
                 questions: {
@@ -818,7 +821,7 @@ const CreateNewSurveyScreen = ({ navigation, route }) => {
         const reId = updated.map((q, idx) => ({ ...q, id: idx + 1 }));
         setQuestions(reId);
 
-        const newValidationErrors = { ...validationErrors.questions };
+        const newValidationErrors = { ...(validationErrors.questions || {}) };
         delete newValidationErrors[indexToRemove];
         
         const reindexedErrors = {};
@@ -1125,6 +1128,30 @@ const CreateNewSurveyScreen = ({ navigation, route }) => {
             console.log('User ID:', user.id);
             console.log('Existing Draft ID:', draftId);
             
+            // ✅ NEW: Validate mandatory fields for draft saving (no alert, just highlight)
+            const errors = { ...defaultValidationErrors };
+            let hasErrors = false;
+            
+            if (!formHeading || formHeading.trim() === '') {
+                errors.formHeading = true;
+                hasErrors = true;
+            }
+            
+            if (!selectedCategory) {
+                errors.category = true;
+                hasErrors = true;
+            }
+            
+            if (hasErrors) {
+                setValidationErrors(errors);
+                setIsSaving(false);
+                // No alert - just return, fields will show red underline
+                return;
+            }
+            
+            // Clear validation errors if all is good
+            setValidationErrors(defaultValidationErrors);
+            
             let savedDraftId;
             
             // If we already have a draft ID, update it instead of creating new
@@ -1133,44 +1160,8 @@ const CreateNewSurveyScreen = ({ navigation, route }) => {
                 savedDraftId = await updateDraftInSupabase();
             } else {
                 console.log('Creating new draft...');
-                // Validate critical fields
-                if (!formHeading.trim() || !selectedCategory) {
-                    Alert.alert(
-                        "Incomplete Form",
-                        "Please fill at least:\n• Form Heading\n• Category\n\nYou can save as draft, but these are required to publish.",
-                        [
-                            { text: "Cancel", style: "cancel", onPress: () => setIsSaving(false) },
-                            { 
-                                text: "Save Anyway", 
-                                onPress: async () => {
-                                    try {
-                                        console.log('Saving draft without required fields...');
-                                        const newDraftId = await saveDraftToSupabase();
-                                        console.log('Draft saved with ID:', newDraftId);
-                                        setDraftId(newDraftId); // Store the draft ID
-                                        Alert.alert(
-                                            "Draft Saved", 
-                                            "Draft saved successfully!",
-                                            [{ 
-                                                text: "OK", 
-                                                onPress: () => navigation.navigate('CreatorDashboard')
-                                            }]
-                                        );
-                                    } catch (error) {
-                                        console.error('Save error details:', error);
-                                        Alert.alert("Error", `Failed to save: ${error.message}`);
-                                    } finally {
-                                        setIsSaving(false);
-                                    }
-                                }
-                            }
-                        ]
-                    );
-                    return;
-                } else {
-                    savedDraftId = await saveDraftToSupabase();
-                    setDraftId(savedDraftId); // Store the new draft ID
-                }
+                savedDraftId = await saveDraftToSupabase();
+                setDraftId(savedDraftId); // Store the new draft ID
             }
             
             console.log('Draft saved/updated with ID:', savedDraftId);
@@ -1214,7 +1205,7 @@ const CreateNewSurveyScreen = ({ navigation, route }) => {
                 (validationErrors.formHeading ? "• Form heading cannot be empty\n" : "") +
                 (validationErrors.formDescription ? "• Form description cannot be empty\n" : "") +
                 (validationErrors.category ? "• Category must be selected\n" : "") +
-                (Object.keys(validationErrors.questions).length > 0 ? "• Some questions have empty fields or options\n" : ""),
+                (Object.keys(validationErrors.questions || {}).length > 0 ? "• Some questions have empty fields or options\n" : ""),
                 [{ text: "OK" }]
             );
             return;
@@ -1388,7 +1379,9 @@ const CreateNewSurveyScreen = ({ navigation, route }) => {
                         showCategoryDropdown,
                         setShowCategoryDropdown,
                         handleCategorySelect,
-                        "Select Category"
+                        "Select Category",
+                        false,
+                        validationErrors.category
                     )}
                     {validationErrors.category && (
                         <Text style={styles.errorText}>Please select a category</Text>
@@ -1624,7 +1617,7 @@ const CreateNewSurveyScreen = ({ navigation, route }) => {
                     {questions.length > 1 && (
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.questionNavigation}>
                             {questions.map((question, index) => {
-                                const hasErrors = validationErrors.questions[index];
+                                const hasErrors = validationErrors.questions?.[index];
                                 return (
                                     <TouchableOpacity
                                         key={question.id}
@@ -1661,7 +1654,7 @@ const CreateNewSurveyScreen = ({ navigation, route }) => {
 
                             <View style={[
                                 styles.questionNumberSquare,
-                                validationErrors.questions[currentQuestionIndex] && styles.errorQuestionNumber
+                                validationErrors.questions?.[currentQuestionIndex] && styles.errorQuestionNumber
                             ]}>
                                 <Text style={styles.questionNumber}>{currentQuestionIndex + 1}</Text>
                             </View>
@@ -1682,14 +1675,14 @@ const CreateNewSurveyScreen = ({ navigation, route }) => {
                         <TextInput
                             style={[
                                 styles.questionTextInput,
-                                validationErrors.questions[currentQuestionIndex]?.text && styles.errorInput
+                                validationErrors.questions?.[currentQuestionIndex]?.text && styles.errorInput
                             ]}
                             placeholder="Enter your question"
                             placeholderTextColor="#aaa"
                             value={questions[currentQuestionIndex].questionText}
                             onChangeText={updateQuestionText}
                         />
-                        {validationErrors.questions[currentQuestionIndex]?.text && (
+                        {validationErrors.questions?.[currentQuestionIndex]?.text && (
                             <Text style={styles.errorText}>Question cannot be empty</Text>
                         )}
                         
@@ -1701,9 +1694,9 @@ const CreateNewSurveyScreen = ({ navigation, route }) => {
                         {['multiple_choice', 'checkboxes', 'dropdown'].includes(questions[currentQuestionIndex].questionType) && (
                             <>
                                 <Text style={styles.inputLabel}>
-                                    Options {validationErrors.questions[currentQuestionIndex]?.options && <Text style={styles.requiredAsterisk}>*</Text>}
+                                    Options {validationErrors.questions?.[currentQuestionIndex]?.options && <Text style={styles.requiredAsterisk}>*</Text>}
                                 </Text>
-                                {validationErrors.questions[currentQuestionIndex]?.options && (
+                                {validationErrors.questions?.[currentQuestionIndex]?.options && (
                                     <Text style={styles.errorText}>All options must be filled</Text>
                                 )}
                                 {questions[currentQuestionIndex].options.map((option, optionIndex) => {
@@ -1714,7 +1707,7 @@ const CreateNewSurveyScreen = ({ navigation, route }) => {
                                     return (
                                         <View key={optionIndex} style={[
                                             styles.optionRow,
-                                            isEmptyOption && validationErrors.questions[currentQuestionIndex]?.options && styles.errorOptionRow
+                                            isEmptyOption && validationErrors.questions?.[currentQuestionIndex]?.options && styles.errorOptionRow
                                         ]}>
                                             <View style={[styles.optionBadge, { backgroundColor: badgeColor }]}>
                                                 <Text style={styles.optionBadgeText}>{letter}</Text>
@@ -1722,7 +1715,7 @@ const CreateNewSurveyScreen = ({ navigation, route }) => {
                                             <TextInput 
                                                 style={[
                                                     styles.optionInput,
-                                                    isEmptyOption && validationErrors.questions[currentQuestionIndex]?.options && styles.errorInput
+                                                    isEmptyOption && validationErrors.questions?.[currentQuestionIndex]?.options && styles.errorInput
                                                 ]} 
                                                 placeholder={`Option ${optionIndex + 1}`} 
                                                 placeholderTextColor="#aaa"

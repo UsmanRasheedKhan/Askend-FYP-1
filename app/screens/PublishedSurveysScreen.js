@@ -734,9 +734,9 @@ const PublishedSurveysScreen = () => {
               </View>
               
               <View style={styles.statCard}>
-                <MaterialIcons name="attach-money" size={30} color="#7C58FF" />
+                <Text style={{ fontSize: 30, color: "#7C58FF", fontWeight: 'bold' }}>RS</Text>
                 <Text style={styles.statNumber}>
-                  PKR {publishedSurveys.reduce((sum, survey) => sum + survey.price, 0)}
+                  {publishedSurveys.reduce((sum, survey) => sum + survey.price, 0)}
                 </Text>
                 <Text style={styles.statLabel}>Total Value</Text>
               </View>

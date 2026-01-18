@@ -419,9 +419,9 @@ const FinishedSurveysScreen = () => {
             </View>
             
             <View style={styles.statItem}>
-              <MaterialIcons name="attach-money" size={16} color="#666" />
+              <Text style={{ fontSize: 14, color: "#666", fontWeight: 'bold' }}>RS</Text>
               <Text style={styles.statText}>
-                PKR {survey.price}
+                {survey.price}
               </Text>
             </View>
           </View>
@@ -575,9 +575,9 @@ const FinishedSurveysScreen = () => {
               </View>
               
               <View style={styles.statCard}>
-                <MaterialIcons name="attach-money" size={30} color="#4CAF50" />
+                <Text style={{ fontSize: 30, color: "#4CAF50", fontWeight: 'bold' }}>RS</Text>
                 <Text style={styles.statNumber}>
-                  PKR {finishedSurveys.reduce((sum, survey) => sum + survey.price, 0)}
+                  {finishedSurveys.reduce((sum, survey) => sum + survey.price, 0)}
                 </Text>
                 <Text style={styles.statLabel}>Total Value</Text>
               </View>

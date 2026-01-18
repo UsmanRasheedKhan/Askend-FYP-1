@@ -371,7 +371,71 @@ const PreviewScreen = ({ navigation, route }) => {
     };
 
     const handlePublishSurvey = () => {
-        console.log('Navigating to ChoosePlan with draftId:', draftId);
+        console.log('Validating survey before publishing...');
+        
+        // ✅ Validate entire form (heading, description, category, questions/options)
+        const validationErrors = [];
+
+        const category = formData?.selectedCategory || formData?.category;
+
+        if (!formHeading || formHeading.trim() === '') {
+            validationErrors.push('Form heading is required');
+        }
+
+        if (!formDescription || formDescription.trim() === '') {
+            validationErrors.push('Form description is required');
+        }
+
+        if (!category) {
+            validationErrors.push('Form category is required');
+        }
+        
+        questions.forEach((question, index) => {
+            const questionNumber = index + 1;
+            
+            // Check if question text is empty
+            if (!question?.questionText || question.questionText.trim() === '') {
+                validationErrors.push(`Question ${questionNumber}: question text is missing`);
+            }
+            
+            // Check if question types with options have complete options
+            if (['multiple_choice', 'checkboxes', 'dropdown'].includes(question?.questionType)) {
+                const optionsArray = Array.isArray(question?.options)
+                    ? question.options
+                    : question?.options && typeof question.options === 'object'
+                        ? Object.values(question.options)
+                        : [];
+
+                if (optionsArray.length === 0) {
+                    validationErrors.push(`Question ${questionNumber}: no options provided`);
+                } else {
+                    // Check for empty options
+                    const emptyOptions = optionsArray.filter(opt => !opt || opt.toString().trim() === '');
+                    if (emptyOptions.length > 0) {
+                        validationErrors.push(`Question ${questionNumber}: ${emptyOptions.length} option(s) are empty`);
+                    }
+                }
+            }
+        });
+        
+        // If there are validation errors, show alert and offer to edit
+        if (validationErrors.length > 0) {
+            const errorMessage = validationErrors.join('\n');
+            Alert.alert(
+                "Incomplete Survey Form",
+                `Please complete the following before publishing:\n\n${errorMessage}\n\nAll questions must have text and complete options.`,
+                [
+                    { text: "Cancel", style: "cancel" },
+                    { 
+                        text: "Edit Survey", 
+                        onPress: handleEditSurvey 
+                    }
+                ]
+            );
+            return;
+        }
+        
+        console.log('Validation passed. Navigating to ChoosePlan with draftId:', draftId);
         
         // ✅ FIX: Pass draftId correctly
         navigation.navigate('ChoosePlanScreen', { 

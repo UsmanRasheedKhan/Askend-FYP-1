@@ -140,8 +140,15 @@ const CustomPlan = ({ isSelected, onSelect, customResponses, setCustomResponses 
                         placeholder="e.g. 500"
                         placeholderTextColor="#b6b6b6"
                         value={customResponses}
-                        onChangeText={setCustomResponses}
+                        onChangeText={(text) => {
+                            // ✅ Limit to 6 digits only
+                            const numericText = text.replace(/[^0-9]/g, '');
+                            if (numericText.length <= 6) {
+                                setCustomResponses(numericText);
+                            }
+                        }}
                         onFocus={onSelect}
+                        maxLength={6}
                     />
                     
                     <View style={styles.customPriceRow}>

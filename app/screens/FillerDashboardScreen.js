@@ -294,9 +294,15 @@ const getCategoryColor = (category) => {
 };
 
 // Check if survey category matches user's interests/hobbies
-const checkInterestMatch = (surveyCategory, userHobbiesData) => {
+const checkInterestMatch = (surveyCategory, userHobbiesData, isPublicForm) => {
+    // ✅ FIX: Public surveys are always accessible
+    if (isPublicForm) {
+        return true;
+    }
+    
+    // ✅ FIX: If user has no interests set, show all private surveys (don't gray out)
     if (!userHobbiesData || !surveyCategory) {
-        return false; // No interests selected or no category
+        return true; // Show all surveys if no interests are set
     }
 
     // Map survey categories to interest categories
@@ -320,6 +326,11 @@ const checkInterestMatch = (surveyCategory, userHobbiesData) => {
         if (userHobbiesData[interest] && userHobbiesData[interest].length > 0) {
             return true;
         }
+    }
+    
+    // ✅ FIX: If no match but survey category is not in map, show it anyway
+    if (relatedInterests.length === 0) {
+        return true;
     }
     
     return false;
@@ -1070,9 +1081,9 @@ const FillerDashboardScreen = ({ navigation, route }) => {
                                         ? () => handleViewSubmission(survey)
                                         : () => handleSurveyClick(survey);
 
-                                    // Check if survey matches user's interests
+                                    // ✅ FIX: Check if survey matches user's interests (pass isPublicForm)
                                     const matchesInterest = userProfile?.hobbies_data 
-                                        ? checkInterestMatch(survey.category, userProfile.hobbies_data)
+                                        ? checkInterestMatch(survey.category, userProfile.hobbies_data, survey.isPublicForm)
                                         : true; // If no interests set, show all surveys
 
                                     return (
